@@ -203,7 +203,7 @@ if st.button('Añadir Producto al Pedido', type="primary", key='add_product_butt
         st.session_state.show_generated_summary = False # Oculta el resumen
         
         # También limpia la selección de producto y las cantidades después de añadir para una mejor UX
-        st.session_state['product_select'] = "" # Reinicia el selectbox
+        st.session_state['product_select'] = " " # Reinicia el selectbox
         st.session_state['cantidad_cajas_input'] = 0 # Reinicia la cantidad
         st.session_state['cantidad_unidades_input'] = 0 # Reinicia la cantidad
         st.rerun() # Fuerza una re-ejecución para limpiar las entradas y actualizar el estado de los botones
