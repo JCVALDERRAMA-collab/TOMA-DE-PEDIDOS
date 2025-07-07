@@ -95,6 +95,10 @@ if 'pedido_actual' not in st.session_state:
     st.session_state.pedido_actual = []
 if 'global_summary_core_text' not in st.session_state:
     st.session_state.global_summary_core_text = ""
+# Nueva variable para controlar si el resumen ya se ha generado y debe mostrarse
+if 'show_generated_summary' not in st.session_state:
+    st.session_state.show_generated_summary = False
+
 
 # --- Validation functions for email and phone ---
 def is_valid_email(email):
@@ -180,8 +184,9 @@ if st.button('Añadir Producto al Pedido', type="primary", disabled=(producto_en
             "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
         })
         st.success(f"Producto '{selected_description}' añadido al pedido.")
-        # Clear the summary when a new product is added, so "Generar Resumen Final" shows again
+        # Clear the summary and hide it when a new product is added
         st.session_state.global_summary_core_text = ""
+        st.session_state.show_generated_summary = False # Hide the summary
 
 
 st.write("---")
@@ -206,8 +211,8 @@ st.session_state.cliente_telefono = cliente_telefono
 
 st.write("---")
 
-# Conditional button display: "Generar Resumen Final" or "Copiar Información"
-if not st.session_state.global_summary_core_text: # If summary not yet generated
+# Conditional button display and summary generation
+if not st.session_state.show_generated_summary: # If summary is not currently being shown
     if st.button('Generar Resumen Final', type="secondary"):
         if not st.session_state.pedido_actual:
             st.warning("No hay productos en el pedido para generar un resumen.")
@@ -250,21 +255,15 @@ if not st.session_state.global_summary_core_text: # If summary not yet generated
                 summary_core += "Resumen de la solicitud finalizado."
                 
                 st.session_state.global_summary_core_text = summary_core
-                # Display the summary immediately after generation
-                st.subheader("Resumen Generado")
-                st.code(st.session_state.global_summary_core_text)
+                st.session_state.show_generated_summary = True # Now set to True to display summary
 
-# If summary is already generated, show the summary and "Copiar Información" button
-if st.session_state.global_summary_core_text:
-    # Ensure the summary is only displayed once if it already exists
-    if not st.session_state.get('summary_displayed_once', False):
-        st.subheader("Resumen Generado")
-        st.code(st.session_state.global_summary_core_text)
-        st.session_state.summary_displayed_once = True # Mark as displayed
-
+# Display the summary and "Copiar Información" button if show_generated_summary is True
+if st.session_state.show_generated_summary:
     st.write("---")
-    # The 'whatsapp_message_final' variable doesn't exist in your code,
-    # it should be st.session_state.global_summary_core_text
+    st.subheader("Resumen Generado") 
+    st.code(st.session_state.global_summary_core_text)
+
+    # The button to copy the information
     if st.button("Copiar Información", type="success", disabled=not st.session_state.global_summary_core_text):
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
