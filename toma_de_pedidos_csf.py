@@ -400,7 +400,7 @@ if not st.session_state.show_generated_summary:
             )
         with col2:
             cantidad_unidades_val = st.number_input(
-                "Cantidad de Unidades Individuales Adicionales (fuera de cajas):",
+                "Cantidad de Unidades Individuales Adicionales :",
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
