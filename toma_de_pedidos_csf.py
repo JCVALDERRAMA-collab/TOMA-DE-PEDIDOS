@@ -256,11 +256,6 @@ if not st.session_state.show_generated_summary: # If summary is not currently be
                 st.session_state.global_summary_core_text = summary_core
                 st.session_state.show_generated_summary = True # Now set to True to display summary
 
-# Display the summary and "Copiar Información" button if show_generated_summary is True
-if st.session_state.show_generated_summary:
-    st.write("---")
-    st.subheader("Resumen Generado") 
-    st.code(st.session_state.global_summary_core_text)
 
     st.write("---")
     if st.button("Copiar Información"):
