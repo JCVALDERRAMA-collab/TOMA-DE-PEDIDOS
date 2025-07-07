@@ -7,7 +7,7 @@ from st_copy_to_clipboard import st_copy_to_clipboard
 
 # --- Configuration for the consecutive number ---
 CONSECUTIVE_FILE = 'ultimo_consecutivo.txt'
-INITIAL_CONSECUTIVE = 00
+INITIAL_CONSECUTIVE = 1000
 
 def get_next_consecutive():
     """Reads the last consecutive number from a file, increments it, and saves it back."""
@@ -97,6 +97,10 @@ if 'global_summary_core_text' not in st.session_state:
     st.session_state.global_summary_core_text = ""
 if 'show_generated_summary' not in st.session_state:
     st.session_state.show_generated_summary = False
+if 'cliente_email' not in st.session_state:
+    st.session_state.cliente_email = ''
+if 'cliente_telefono' not in st.session_state:
+    st.session_state.cliente_telefono = ''
 
 
 # --- Validation functions for email and phone ---
@@ -139,6 +143,7 @@ selected_description = st.selectbox(
     'Selecciona un producto:',
     options=[""] + descripciones_productos,
     index=0,
+    key='product_select', # Añadido key para el selectbox
     help="Empieza a escribir o selecciona un producto de la lista."
 )
 
@@ -158,7 +163,8 @@ with col1:
         min_value=0,
         value=0,
         step=1,
-        disabled=(producto_encontrado is None)
+        disabled=(producto_encontrado is None),
+        key='cajas_input' # Añadido key
     )
 
 with col2:
@@ -167,10 +173,11 @@ with col2:
         min_value=0,
         value=0,
         step=1,
-        disabled=(producto_encontrado is None)
+        disabled=(producto_encontrado is None),
+        key='unidades_input' # Añadido key
     )
 
-if st.button('Añadir Producto al Pedido', type="primary", disabled=(producto_encontrado is None or (cantidad_cajas == 0 and cantidad_unidades == 0))):
+if st.button('Añadir Producto al Pedido', type="primary", key='add_product_button', disabled=(producto_encontrado is None or (cantidad_cajas == 0 and cantidad_unidades == 0))):
     if not selected_description or (cantidad_cajas == 0 and cantidad_unidades == 0):
         st.error("❌ Error: Selecciona un producto e ingresa al menos una cantidad (caja o unidad).")
     else:
@@ -183,15 +190,27 @@ if st.button('Añadir Producto al Pedido', type="primary", disabled=(producto_en
             "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
         })
         st.success(f"Producto '{selected_description}' añadido al pedido.")
-        # Clear the summary and hide it when a new product is added
+        # Reset the summary state when a new product is added
         st.session_state.global_summary_core_text = ""
-        st.session_state.show_generated_summary = False # Hide the summary
-
+        st.session_state.show_generated_summary = False 
+        # Also clear product selection and quantities after adding
+        st.session_state.product_select = "" # Reset selectbox
+        st.session_state.cajas_input = 0 # Reset quantity
+        st.session_state.unidades_input = 0 # Reset quantity
+        st.rerun() # Rerun to clear inputs and update button state
 
 st.write("---")
 
 st.subheader("Productos en el Pedido")
 if st.session_state.pedido_actual:
+    # Option to clear all products
+    if st.button("Limpiar Pedido Completo", key='clear_all_products_button', type="secondary"):
+        st.session_state.pedido_actual = []
+        st.session_state.global_summary_core_text = ""
+        st.session_state.show_generated_summary = False
+        st.success("✔️ ¡Pedido limpiado!")
+        st.rerun() # Rerun to reflect changes immediately
+        
     for i, item in enumerate(st.session_state.pedido_actual):
         total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
         st.markdown(f"**{i+1}.** {item['DESCRIPCION']} - Cajas: {item['CANT_CAJAS']}, Unidades: {item['CANT_UNIDADES_IND']} (Total: {total_unidades_item} uds)")
@@ -201,18 +220,29 @@ else:
 st.write("---")
 
 st.subheader("Información de Contacto Adicional")
-cliente_email = st.text_input("Email Cliente:", value=st.session_state.get('cliente_email', ''), placeholder='ejemplo@dominio.com', key='email_input')
-cliente_telefono = st.text_input("Teléfono Cliente:", value=st.session_state.get('cliente_telefono', ''), placeholder='Ej: +57 300 1234567', key='phone_input')
 
-# Store inputs in session state to persist them across reruns
-st.session_state.cliente_email = cliente_email
-st.session_state.cliente_telefono = cliente_telefono
+# Get current values for comparison
+current_email = st.session_state.get('cliente_email', '')
+current_phone = st.session_state.get('cliente_telefono', '')
+
+cliente_email = st.text_input("Email Cliente:", value=current_email, placeholder='ejemplo@dominio.com', key='email_input')
+cliente_telefono = st.text_input("Teléfono Cliente:", value=current_phone, placeholder='Ej: +57 300 1234567', key='phone_input')
+
+# Check if contact info has changed
+if cliente_email != current_email or cliente_telefono != current_phone:
+    st.session_state.global_summary_core_text = ""
+    st.session_state.show_generated_summary = False
+    # No st.rerun() here, as it's handled by Streamlit's normal flow
+    # Storing the new values
+    st.session_state.cliente_email = cliente_email
+    st.session_state.cliente_telefono = cliente_telefono
+
 
 st.write("---")
 
 # Conditional button display and summary generation
 if not st.session_state.show_generated_summary: # If summary is not currently being shown
-    if st.button('Generar Resumen Final', type="secondary"):
+    if st.button('Generar Resumen Final', type="secondary", key='generate_summary_button'):
         if not st.session_state.pedido_actual:
             st.warning("No hay productos en el pedido para generar un resumen.")
         else:
@@ -254,7 +284,8 @@ if not st.session_state.show_generated_summary: # If summary is not currently be
                 summary_core += "Resumen de la solicitud finalizado."
                 
                 st.session_state.global_summary_core_text = summary_core
-                st.session_state.show_generated_summary = True # Now set to True to display summary
+                st.session_state.show_generated_summary = True 
+                st.rerun() # Rerun to immediately display summary and hide "Generar Resumen Final" button
 
 # Display the summary and "Copiar Información" button if show_generated_summary is True
 if st.session_state.show_generated_summary:
@@ -262,8 +293,6 @@ if st.session_state.show_generated_summary:
     st.subheader("Resumen Generado") 
     st.code(st.session_state.global_summary_core_text)
 
-    # The button to copy the information now correctly references the summary text
-    if st.button("Copiar Información", type="success", disabled=not st.session_state.global_summary_core_text):
-        # *** ESTA ES LA LÍNEA CLAVE QUE CAMBIAMOS ***
+    if st.button("Copiar Información", type="success", key='copy_info_button', disabled=not st.session_state.global_summary_core_text):
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
