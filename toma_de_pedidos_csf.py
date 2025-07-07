@@ -177,6 +177,10 @@ productos_data_unidades = [
     {"COD_PRODUCTO": "#N/D_BLP9W_U", "DESCRIPCION": "BOMBILLO LED POLAR X 9W / UNIDAD", "UNIDAD_X_PAQUETE": 1, "UNIDAD_X_CAJA": 12},
 ]
 
+# Prepend an empty string to the product descriptions for the "empty" selectbox option
+all_product_options_cajas = [""] + df_productos_cajas['DESCRIPCION'].tolist()
+all_product_options_unidades = [""] + df_productos_unidades['DESCRIPCION'].tolist()
+
 df_productos_cajas = pd.DataFrame(productos_data_cajas)
 df_productos_unidades = pd.DataFrame(productos_data_unidades)
 
