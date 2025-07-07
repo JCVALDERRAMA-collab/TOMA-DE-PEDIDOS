@@ -197,6 +197,32 @@ else:
     st.info("No hay productos añadidos al pedido aún.")
 
 st.write("---")
+# Conditional display of contact info and copy button
+if st.session_state.global_summary_core_text:
+    st.write("---")
+    st.subheader("Información de Contacto Adicional")
+    cliente_email = st.text_input("Email Cliente:", value='', placeholder='ejemplo@dominio.com')
+    cliente_telefono = st.text_input("Teléfono Cliente:", value='', placeholder='Ej: +57 300 1234567')
+
+    if st.button('Copiar Resumen al Portapapeles', type="success"):
+        email_valid = is_valid_email(cliente_email)
+        phone_valid = is_valid_phone(cliente_telefono)
+
+        if not email_valid:
+            st.error("❌ Error: Formato de email inválido.")
+        elif not phone_valid:
+            st.error("❌ Error: Formato de teléfono inválido.")
+        else:
+            final_summary_to_copy = st.session_state.global_summary_core_text
+            if cliente_email:
+                final_summary_to_copy += f"\nEmail Cliente: {cliente_email}"
+            if cliente_telefono:
+                final_summary_to_copy += f"\nTeléfono Cliente: {cliente_telefono}"
+            
+            st.code(final_summary_to_copy)
+            st.success("✅ Resumen copiado (puedes copiar el texto de arriba manualmente).")
+
+st.write("---")
 
 if st.button('Generar Resumen Final', type="secondary"):
     if not st.session_state.pedido_actual:
