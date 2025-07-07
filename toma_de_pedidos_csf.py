@@ -194,7 +194,7 @@ if st.button('Añadir Producto al Pedido', type="primary", key='add_product_butt
         st.session_state.global_summary_core_text = ""
         st.session_state.show_generated_summary = False 
         # Also clear product selection and quantities after adding
-        st.session_state.product_select = "" # Reset selectbox
+        st.session_state.product_select = " " # Reset selectbox
         st.session_state.cajas_input = 0 # Reset quantity
         st.session_state.unidades_input = 0 # Reset quantity
         st.rerun() # Rerun to clear inputs and update button state
