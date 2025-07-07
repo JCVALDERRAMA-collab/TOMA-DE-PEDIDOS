@@ -264,5 +264,5 @@ if not st.session_state.show_generated_summary: # If summary is not currently be
 
     st.write("---")
     if st.button("Copiar Información"):
-        st_copy_to_clipboard(st.code)
+        st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
