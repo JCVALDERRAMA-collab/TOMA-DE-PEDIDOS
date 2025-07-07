@@ -180,9 +180,7 @@ productos_data_unidades = [
 df_productos_cajas = pd.DataFrame(productos_data_cajas)
 df_productos_unidades = pd.DataFrame(productos_data_unidades)
 
-# Prepend an empty string to the product descriptions for the "empty" selectbox option
-all_product_options_cajas = [""] + df_productos_cajas['DESCRIPCION'].tolist()
-all_product_options_unidades = [""] + df_productos_unidades['DESCRIPCION'].tolist()
+
 
 
 # --- Initialize session state ---
