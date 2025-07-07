@@ -112,13 +112,13 @@ def is_valid_phone(phone):
 st.set_page_config(layout="centered", page_title="Generador de Pedidos")
 
 # --- Sección para el logo ---
-# REEMPLAZA "tu_logo.png" con el nombre de tu archivo de imagen
+# REEMPLAZA "LOGO 2.png" con el nombre de tu archivo de imagen
 # Asegúrate de que el archivo de imagen esté en la misma carpeta que tu script de Streamlit,
 # o especifica la ruta completa (ej: "imagenes/tu_logo.png")
 try:
-    st.image("LOGO 2.png", width=200)
+    st.image("LOGO 2.png", width=200) # Mantuviste el nombre del archivo "LOGO 2.png" y width=200
 except FileNotFoundError:
-    st.warning("⚠️ No se encontró el logo. Asegúrate de que 'tu_logo.png' esté en la misma carpeta o la ruta sea correcta.")
+    st.warning("⚠️ No se encontró el logo. Asegúrate de que 'LOGO 2.png' esté en la misma carpeta o la ruta sea correcta.")
     # Puedes usar un placeholder si no encuentras el logo para evitar errores
     # st.image("https://via.placeholder.com/150", width=150, caption="Logo Placeholder")
 
@@ -197,32 +197,10 @@ else:
     st.info("No hay productos añadidos al pedido aún.")
 
 st.write("---")
-# Conditional display of contact info and copy button
-if st.session_state.global_summary_core_text:
-    st.write("---")
-    st.subheader("Información de Contacto Adicional")
-    cliente_email = st.text_input("Email Cliente:", value='', placeholder='ejemplo@dominio.com')
-    cliente_telefono = st.text_input("Teléfono Cliente:", value='', placeholder='Ej: +57 300 1234567')
 
-    if st.button('Copiar Resumen al Portapapeles', type="success"):
-        email_valid = is_valid_email(cliente_email)
-        phone_valid = is_valid_phone(cliente_telefono)
-
-        if not email_valid:
-            st.error("❌ Error: Formato de email inválido.")
-        elif not phone_valid:
-            st.error("❌ Error: Formato de teléfono inválido.")
-        else:
-            final_summary_to_copy = st.session_state.global_summary_core_text
-            if cliente_email:
-                final_summary_to_copy += f"\nEmail Cliente: {cliente_email}"
-            if cliente_telefono:
-                final_summary_to_copy += f"\nTeléfono Cliente: {cliente_telefono}"
-            
-            st.code(final_summary_to_copy)
-            st.success("✅ Resumen copiado (puedes copiar el texto de arriba manualmente).")
-
-st.write("---")
+# The "Generar Resumen Final" button and its logic should come before the "Información de Contacto Adicional"
+# and "Copiar Resumen al Portapapeles" button, because the latter depends on `st.session_state.global_summary_core_text`
+# being populated.
 
 if st.button('Generar Resumen Final', type="secondary"):
     if not st.session_state.pedido_actual:
@@ -255,4 +233,28 @@ if st.button('Generar Resumen Final', type="secondary"):
         st.subheader("Resumen Generado")
         st.code(st.session_state.global_summary_core_text)
 
+# Conditional display of contact info and copy button
+if st.session_state.global_summary_core_text:
+    st.write("---")
+    st.subheader("Información de Contacto Adicional")
+    cliente_email = st.text_input("Email Cliente:", value='', placeholder='ejemplo@dominio.com')
+    cliente_telefono = st.text_input("Teléfono Cliente:", value='', placeholder='Ej: +57 300 1234567')
+
+    if st.button('Copiar Resumen al Portapapeles', type="success"):
+        email_valid = is_valid_email(cliente_email)
+        phone_valid = is_valid_phone(cliente_telefono)
+
+        if not email_valid:
+            st.error("❌ Error: Formato de email inválido.")
+        elif not phone_valid:
+            st.error("❌ Error: Formato de teléfono inválido.")
+        else:
+            final_summary_to_copy = st.session_state.global_summary_core_text
+            if cliente_email:
+                final_summary_to_copy += f"\nEmail Cliente: {cliente_email}"
+            if cliente_telefono:
+                final_summary_to_copy += f"\nTeléfono Cliente: {cliente_telefono}"
+            
+            st.code(final_summary_to_copy)
+            st.success("✅ Resumen copiado (puedes copiar el texto de arriba manualmente).")
 
