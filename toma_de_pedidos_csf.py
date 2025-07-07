@@ -287,7 +287,6 @@ if not st.session_state.show_generated_summary:
                 
                 st.session_state.global_summary_core_text = summary_core
                 st.session_state.show_generated_summary = True # Establece en True para mostrar el resumen
-                st.rerun() # Fuerza una re-ejecución para ocultar inmediatamente este botón y mostrar el resumen/botón de copiar
 
 # Muestra el resumen y el botón "Copiar Información" si show_generated_summary es True
 # Este bloque ahora está fuera del bloque 'if not st.session_state.show_generated_summary',
