@@ -198,63 +198,61 @@ else:
 
 st.write("---")
 
-# The "Generar Resumen Final" button and its logic should come before the "Información de Contacto Adicional"
-# and "Copiar Resumen al Portapapeles" button, because the latter depends on `st.session_state.global_summary_core_text`
-# being populated.
+st.subheader("Información de Contacto Adicional")
+cliente_email = st.text_input("Email Cliente:", value='', placeholder='ejemplo@dominio.com')
+cliente_telefono = st.text_input("Teléfono Cliente:", value='', placeholder='Ej: +57 300 1234567')
+
+st.write("---")
 
 if st.button('Generar Resumen Final', type="secondary"):
     if not st.session_state.pedido_actual:
         st.warning("No hay productos en el pedido para generar un resumen.")
     else:
-        consecutivo = get_next_consecutive()
-        
-        summary_core = ""
-        summary_core += "--- Resumen General de la Solicitud ---\n"
-        summary_core += f"Número de Pedido: {consecutivo}\n"
-        summary_core += f"Fecha y Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        summary_core += f"NIT: {nit}\n"
-        summary_core += f"Cliente: {nombre_cliente}\n"
-        summary_core += "\n--- Detalles de los Productos Pedidos ---\n"
-
-        for i, item in enumerate(st.session_state.pedido_actual):
-            total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
-            summary_core += f"\nProducto {i+1}:\n"
-            summary_core += f"  Código: {item['COD_PRODUCTO']}\n"
-            summary_core += f"  Descripción: {item['DESCRIPCION']}\n"
-            summary_core += f"  Cant. Cajas: {item['CANT_CAJAS']}\n"
-            summary_core += f"  Cant. Unidades Individuales: {item['CANT_UNIDADES_IND']}\n"
-            summary_core += f"  Unidades por Caja (del producto): {item['UNIDAD_X_CAJA']}\n"
-            summary_core += f"  Total Unidades Calculadas: {total_unidades_item}\n"
-        
-        summary_core += "\n-------------------------------------\n"
-        summary_core += "Resumen de la solicitud finalizado."
-        
-        st.session_state.global_summary_core_text = summary_core
-        st.subheader("Resumen Generado")
-        st.code(st.session_state.global_summary_core_text)
-
-# Conditional display of contact info and copy button
-if st.session_state.global_summary_core_text:
-    st.write("---")
-    st.subheader("Información de Contacto Adicional")
-    cliente_email = st.text_input("Email Cliente:", value='', placeholder='ejemplo@dominio.com')
-    cliente_telefono = st.text_input("Teléfono Cliente:", value='', placeholder='Ej: +57 300 1234567')
-
-    if st.button('Copiar Resumen al Portapapeles', type="success"):
         email_valid = is_valid_email(cliente_email)
         phone_valid = is_valid_phone(cliente_telefono)
 
         if not email_valid:
-            st.error("❌ Error: Formato de email inválido.")
+            st.error("❌ Error: Formato de email inválido. Por favor, corrígelo antes de generar el resumen.")
         elif not phone_valid:
-            st.error("❌ Error: Formato de teléfono inválido.")
+            st.error("❌ Error: Formato de teléfono inválido. Por favor, corrígelo antes de generar el resumen.")
         else:
-            final_summary_to_copy = st.session_state.global_summary_core_text
-            if cliente_email:
-                final_summary_to_copy += f"\nEmail Cliente: {cliente_email}"
-            if cliente_telefono:
-                final_summary_to_copy += f"\nTeléfono Cliente: {cliente_telefono}"
+            consecutivo = get_next_consecutive()
             
-            st.code(final_summary_to_copy)
-            st.success("✅ Resumen copiado (puedes copiar el texto de arriba manualmente).")
+            summary_core = ""
+            summary_core += "--- Resumen General de la Solicitud ---\n"
+            summary_core += f"Número de Pedido: {consecutivo}\n"
+            summary_core += f"Fecha y Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            summary_core += f"NIT: {nit}\n"
+            summary_core += f"Cliente: {nombre_cliente}\n"
+            
+            # Add contact info if provided and valid
+            if cliente_email:
+                summary_core += f"Email Cliente: {cliente_email}\n"
+            if cliente_telefono:
+                summary_core += f"Teléfono Cliente: {cliente_telefono}\n"
 
+            summary_core += "\n--- Detalles de los Productos Pedidos ---\n"
+
+            for i, item in enumerate(st.session_state.pedido_actual):
+                total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
+                summary_core += f"\nProducto {i+1}:\n"
+                summary_core += f"  Código: {item['COD_PRODUCTO']}\n"
+                summary_core += f"  Descripción: {item['DESCRIPCION']}\n"
+                summary_core += f"  Cant. Cajas: {item['CANT_CAJAS']}\n"
+                summary_core += f"  Cant. Unidades Individuales: {item['CANT_UNIDADES_IND']}\n"
+                summary_core += f"  Unidades por Caja (del producto): {item['UNIDAD_X_CAJA']}\n"
+                summary_core += f"  Total Unidades Calculadas: {total_unidades_item}\n"
+            
+            summary_core += "\n-------------------------------------\n"
+            summary_core += "Resumen de la solicitud finalizado."
+            
+            st.session_state.global_summary_core_text = summary_core
+            st.subheader("Resumen Generado")
+            st.code(st.session_state.global_summary_core_text)
+
+# This button now relies on global_summary_core_text, which is populated by "Generar Resumen Final"
+if st.session_state.global_summary_core_text:
+    st.write("---")
+    if st.button('Copiar Resumen al Portapapeles', type="success"):
+        st.code(st.session_state.global_summary_core_text) # Already contains email/phone if generated after input
+        st.success("✅ Resumen copiado (puedes copiar el texto de arriba manualmente).")
