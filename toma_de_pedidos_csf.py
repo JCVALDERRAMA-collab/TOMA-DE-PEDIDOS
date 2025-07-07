@@ -342,3 +342,6 @@ if st.session_state.show_generated_summary:
             type="secondary",
             on_click=go_back_and_add_more
         )
+
+st.markdown("---")
+st.caption("Hecho por Cartera ATW Internacional.")
