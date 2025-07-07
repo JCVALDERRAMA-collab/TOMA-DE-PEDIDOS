@@ -10,7 +10,8 @@ CONSECUTIVE_FILE = 'ultimo_consecutivo.txt'
 INITIAL_CONSECUTIVE = 1000
 
 def get_next_consecutive():
-    """Reads the last consecutive number from a file, increments it, and saves it back."""
+    """Reads the last consecutive number from a file, increments it, and saves it back.
+    This function should only be called when a *new* order is being finalized."""
     current_consecutive = INITIAL_CONSECUTIVE
     if os.path.exists(CONSECUTIVE_FILE):
         try:
@@ -23,7 +24,7 @@ def get_next_consecutive():
                     current_consecutive = INITIAL_CONSECUTIVE
         except ValueError:
             st.warning(f"Advertencia: El archivo '{CONSECUTIVE_FILE}' contiene un valor inválido. Reiniciando consecutivo a {INITIAL_CONSECUTIVE}.")
-            current_consecutive = INITIAL_CONSECUTIVE
+            current_consecutive = INITIAL_consecutive
     
     next_consecutive = current_consecutive + 1
     with open(CONSECUTIVE_FILE, 'w') as f:
@@ -109,6 +110,9 @@ if 'cantidad_cajas_input' not in st.session_state:
     st.session_state.cantidad_cajas_input = 0
 if 'cantidad_unidades_input' not in st.session_state:
     st.session_state.cantidad_unidades_input = 0
+if 'current_consecutive_number' not in st.session_state:
+    # This will store the consecutive number for the current order being built/summarized
+    st.session_state.current_consecutive_number = None 
 
 
 # --- Validation functions for email and phone ---
@@ -148,83 +152,87 @@ st.write("---")
 
 st.subheader("Selección de Productos")
 
-# Use st.session_state.product_select_index to control the selectbox's default value
-selected_index = st.selectbox(
-    'Selecciona un producto:',
-    options=all_product_options,
-    index=st.session_state.product_select_index, # Controlled by session state
-    key='product_select_widget', # Unique key for selectbox widget
-    help="Empieza a escribir o selecciona un producto de la lista."
-)
-# Update the session state index if the user selects a different option
-st.session_state.product_select_index = all_product_options.index(selected_index) if selected_index in all_product_options else 0
-
-producto_encontrado = None
-if selected_index and selected_index != "":
-    df_filtered = df_productos[df_productos['DESCRIPCION'] == selected_index]
-    if not df_filtered.empty:
-        producto_encontrado = df_filtered.iloc[0]
-    else:
-        st.error("Producto no válido o no encontrado. Por favor, selecciona de la lista.")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    cantidad_cajas = st.number_input(
-        "Cantidad de Cajas:",
-        min_value=0,
-        value=st.session_state.cantidad_cajas_input, # Controlled by session state
-        step=1,
-        disabled=(producto_encontrado is None),
-        key='cantidad_cajas_input' # Unique key for number input
+# Conditionally display product selection and add button
+if not st.session_state.show_generated_summary: # Only show product selection if summary is NOT shown
+    # Use st.session_state.product_select_index to control the selectbox's default value
+    selected_index = st.selectbox(
+        'Selecciona un producto:',
+        options=all_product_options,
+        index=st.session_state.product_select_index, # Controlled by session state
+        key='product_select_widget', # Unique key for selectbox widget
+        help="Empieza a escribir o selecciona un producto de la lista."
     )
+    # Update the session state index if the user selects a different option
+    st.session_state.product_select_index = all_product_options.index(selected_index) if selected_index in all_product_options else 0
 
-with col2:
-    cantidad_unidades = st.number_input(
-        "Cantidad de Unidades Individuales:",
-        min_value=0,
-        value=st.session_state.cantidad_unidades_input, # Controlled by session state
-        step=1,
-        disabled=(producto_encontrado is None),
-        key='cantidad_unidades_input' # Unique key for number input
-    )
+    producto_encontrado = None
+    if selected_index and selected_index != "":
+        df_filtered = df_productos[df_productos['DESCRIPCION'] == selected_index]
+        if not df_filtered.empty:
+            producto_encontrado = df_filtered.iloc[0]
+        else:
+            st.error("Producto no válido o no encontrado. Por favor, selecciona de la lista.")
 
-# Use a unique key for this button
-if st.button('Añadir Producto al Pedido', type="primary", key='add_product_button', disabled=(producto_encontrado is None or (cantidad_cajas == 0 and cantidad_unidades == 0))):
-    if not selected_index or (cantidad_cajas == 0 and cantidad_unidades == 0):
-        st.error("❌ Error: Selecciona un producto e ingresa al menos una cantidad (caja o unidad).")
-    else:
-        st.session_state.pedido_actual.append({
-            "COD_PRODUCTO": producto_encontrado['COD_PRODUCTO'],
-            "DESCRIPCION": selected_index,
-            "CANT_CAJAS": cantidad_cajas,
-            "CANT_UNIDADES_IND": cantidad_unidades,
-            "UNIDAD_X_CAJA": producto_encontrado['UNIDAD_X_CAJA'],
-            "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
-        })
-        st.success(f"Producto '{selected_index}' añadido al pedido.")
-        # Reset the summary state when a new product is added
-        st.session_state.global_summary_core_text = ""
-        st.session_state.show_generated_summary = False # Hide the summary
-        
-        # Reset product selection and quantities after adding for a cleaner UX
-        st.session_state.product_select_index = 0 # Reset selectbox to default (empty string)
-        st.session_state.cantidad_cajas_input = 0 # Reset quantity
-        st.session_state.cantidad_unidades_input = 0 # Reset quantity
-        st.rerun() # Forces a rerun to clear inputs and update button states
+    col1, col2 = st.columns(2)
+
+    with col1:
+        cantidad_cajas = st.number_input(
+            "Cantidad de Cajas:",
+            min_value=0,
+            value=st.session_state.cantidad_cajas_input, # Controlled by session state
+            step=1,
+            disabled=(producto_encontrado is None),
+            key='cantidad_cajas_input' # Unique key for number input
+        )
+
+    with col2:
+        cantidad_unidades = st.number_input(
+            "Cantidad de Unidades Individuales:",
+            min_value=0,
+            value=st.session_state.cantidad_unidades_input, # Controlled by session state
+            step=1,
+            disabled=(producto_encontrado is None),
+            key='cantidad_unidades_input' # Unique key for number input
+        )
+
+    # Use a unique key for this button
+    if st.button('Añadir Producto al Pedido', type="primary", key='add_product_button', disabled=(producto_encontrado is None or (cantidad_cajas == 0 and cantidad_unidades == 0))):
+        if not selected_index or (cantidad_cajas == 0 and cantidad_unidades == 0):
+            st.error("❌ Error: Selecciona un producto e ingresa al menos una cantidad (caja o unidad).")
+        else:
+            st.session_state.pedido_actual.append({
+                "COD_PRODUCTO": producto_encontrado['COD_PRODUCTO'],
+                "DESCRIPCION": selected_index,
+                "CANT_CAJAS": cantidad_cajas,
+                "CANT_UNIDADES_IND": cantidad_unidades,
+                "UNIDAD_X_CAJA": producto_encontrado['UNIDAD_X_CAJA'],
+                "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
+            })
+            st.success(f"Producto '{selected_index}' añadido al pedido.")
+            # Reset the summary state when a new product is added
+            st.session_state.global_summary_core_text = ""
+            st.session_state.show_generated_summary = False # Hide the summary
+            
+            # Reset product selection and quantities after adding for a cleaner UX
+            st.session_state.product_select_index = 0 # Reset selectbox to default (empty string)
+            st.session_state.cantidad_cajas_input = 0 # Reset quantity
+            st.session_state.cantidad_unidades_input = 0 # Reset quantity
+            st.rerun() # Forces a rerun to clear inputs and update button states
 
 st.write("---")
 
 st.subheader("Productos en el Pedido")
 if st.session_state.pedido_actual:
-    # Option to clear all products
-    if st.button("Limpiar Pedido Completo", key='clear_all_products_button', type="secondary"):
-        st.session_state.pedido_actual = []
-        st.session_state.global_summary_core_text = ""
-        st.session_state.show_generated_summary = False
-        st.success("✔️ ¡Pedido limpiado!")
-        st.rerun() # Rerun to reflect changes immediately
-        
+    # Option to clear all products - only show if not showing summary
+    if not st.session_state.show_generated_summary:
+        if st.button("Limpiar Pedido Completo", key='clear_all_products_button', type="secondary"):
+            st.session_state.pedido_actual = []
+            st.session_state.global_summary_core_text = ""
+            st.session_state.show_generated_summary = False
+            st.session_state.current_consecutive_number = None # Reset consecutive when order is cleared
+            st.success("✔️ ¡Pedido limpiado!")
+            st.rerun() # Rerun to reflect changes immediately
+            
     for i, item in enumerate(st.session_state.pedido_actual):
         total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
         st.markdown(f"**{i+1}.** {item['DESCRIPCION']} - Cajas: {item['CANT_CAJAS']}, Unidades: {item['CANT_UNIDADES_IND']} (Total: {total_unidades_item} uds)")
@@ -266,11 +274,13 @@ if not st.session_state.show_generated_summary:
             elif not phone_valid:
                 st.error("❌ Error: Formato de teléfono inválido. Por favor, corrígelo antes de generar el resumen.")
             else:
-                consecutivo = get_next_consecutive()
+                # Only get a new consecutive number if it's the first time generating a summary for this order
+                if st.session_state.current_consecutive_number is None:
+                    st.session_state.current_consecutive_number = get_next_consecutive()
                 
                 summary_core = ""
                 summary_core += "--- Resumen General de la Solicitud ---\n"
-                summary_core += f"Número de Pedido: {consecutivo}\n"
+                summary_core += f"Número de Pedido: {st.session_state.current_consecutive_number}\n"
                 summary_core += f"Fecha y Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
                 summary_core += f"NIT: {nit}\n"
                 summary_core += f"Cliente: {nombre_cliente}\n"
@@ -297,14 +307,24 @@ if not st.session_state.show_generated_summary:
                 
                 st.session_state.global_summary_core_text = summary_core
                 st.session_state.show_generated_summary = True # Establece en True para mostrar el resumen
+                st.rerun() # Rerun to hide product selection and show summary
 
-# Muestra el resumen y el botón "Copiar Información" si show_generated_summary es True
+
+# Muestra el resumen y los botones "Copiar Información" y "Volver y Añadir Más Productos" si show_generated_summary es True
 if st.session_state.show_generated_summary:
     st.write("---")
     st.subheader("Resumen Generado")
     st.code(st.session_state.global_summary_core_text)
 
-    # Add the "Copiar Información" button here
-    if st.button("Copiar Información", key='copy_summary_button'):
-        st_copy_to_clipboard(st.session_state.global_summary_core_text)
-        st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
+    col_sum1, col_sum2 = st.columns(2)
+    with col_sum1:
+        if st.button("Copiar Información", key='copy_summary_button', type="primary"):
+            st_copy_to_clipboard(st.session_state.global_summary_core_text)
+            st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
+    with col_sum2:
+        if st.button("Volver y Añadir Más Productos", key='add_more_products_button', type="secondary"):
+            st.session_state.show_generated_summary = False # Hide the summary
+            st.session_state.global_summary_core_text = "" # Clear previous summary text
+            # Do NOT reset current_consecutive_number or pedido_actual, as we are adding to the same order
+            st.success("Volviendo para añadir más productos.")
+            st.rerun() # Rerun to show product selection and hide summary
