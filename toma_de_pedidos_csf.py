@@ -4,12 +4,6 @@ from datetime import datetime
 import os
 import re
 
-try:
-    logo = Image.open('LOGO 2.png')
-    st.image(logo, width=200) # Ajusta el 'width' (ancho) si lo necesitas para que se vea bien
-except FileNotFoundError:
-    st.warning("⚠️ No se encontró el archivo del logo. Asegúrate de que el nombre del archivo sea correcto y esté en la misma carpeta.")
-
 # --- Configuration for the consecutive number ---
 CONSECUTIVE_FILE = 'ultimo_consecutivo.txt'
 INITIAL_CONSECUTIVE = 1000
@@ -29,11 +23,11 @@ def get_next_consecutive():
         except ValueError:
             st.warning(f"Advertencia: El archivo '{CONSECUTIVE_FILE}' contiene un valor inválido. Reiniciando consecutivo a {INITIAL_CONSECUTIVE}.")
             current_consecutive = INITIAL_CONSECUTIVE
-
+    
     next_consecutive = current_consecutive + 1
     with open(CONSECUTIVE_FILE, 'w') as f:
         f.write(str(next_consecutive))
-
+    
     return next_consecutive
 
 # Initialize the file if it doesn't exist on first run
@@ -116,6 +110,18 @@ def is_valid_phone(phone):
 
 # --- Streamlit UI ---
 st.set_page_config(layout="centered", page_title="Generador de Pedidos")
+
+# --- Sección para el logo ---
+# REEMPLAZA "tu_logo.png" con el nombre de tu archivo de imagen
+# Asegúrate de que el archivo de imagen esté en la misma carpeta que tu script de Streamlit,
+# o especifica la ruta completa (ej: "imagenes/tu_logo.png")
+try:
+    st.image("tu_logo.png", width=150, caption="Logo de tu Empresa")
+except FileNotFoundError:
+    st.warning("⚠️ No se encontró el logo. Asegúrate de que 'tu_logo.png' esté en la misma carpeta o la ruta sea correcta.")
+    # Puedes usar un placeholder si no encuentras el logo para evitar errores
+    # st.image("https://via.placeholder.com/150", width=150, caption="Logo Placeholder")
+
 st.title("📝 Generador de Pedidos")
 st.markdown("Completa los detalles para generar un resumen de tu solicitud.")
 
@@ -130,20 +136,15 @@ st.write("---")
 
 st.subheader("Selección de Productos")
 
-# Use a selectbox or text_input for product selection
-# A combobox-like behavior can be simulated with text_input and a dropdown,
-# but for simplicity, a selectbox is often used in Streamlit.
-# If you need type-ahead, you might use a custom component or a text_input with suggestions.
 selected_description = st.selectbox(
     'Selecciona un producto:',
-    options=[""] + descripciones_productos, # Add an empty option
+    options=[""] + descripciones_productos,
     index=0,
     help="Empieza a escribir o selecciona un producto de la lista."
 )
 
 producto_encontrado = None
 if selected_description and selected_description != "":
-    # Check if the selected description exists in the dataframe
     df_filtered = df_productos[df_productos['DESCRIPCION'] == selected_description]
     if not df_filtered.empty:
         producto_encontrado = df_filtered.iloc[0]
@@ -183,11 +184,6 @@ if st.button('Añadir Producto al Pedido', type="primary", disabled=(producto_en
             "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
         })
         st.success(f"Producto '{selected_description}' añadido al pedido.")
-        # Clear selected product after adding
-        # Streamlit widgets re-render, so setting default value for next run is the way
-        # to "clear" the input for the user visually.
-        # This part is tricky with selectbox, often requires a form or a reset key
-        # For simplicity in this example, it stays selected until user picks new.
 
 
 st.write("---")
@@ -207,7 +203,7 @@ if st.button('Generar Resumen Final', type="secondary"):
         st.warning("No hay productos en el pedido para generar un resumen.")
     else:
         consecutivo = get_next_consecutive()
-
+        
         summary_core = ""
         summary_core += "--- Resumen General de la Solicitud ---\n"
         summary_core += f"Número de Pedido: {consecutivo}\n"
@@ -225,10 +221,10 @@ if st.button('Generar Resumen Final', type="secondary"):
             summary_core += f"  Cant. Unidades Individuales: {item['CANT_UNIDADES_IND']}\n"
             summary_core += f"  Unidades por Caja (del producto): {item['UNIDAD_X_CAJA']}\n"
             summary_core += f"  Total Unidades Calculadas: {total_unidades_item}\n"
-
+        
         summary_core += "\n-------------------------------------\n"
         summary_core += "Resumen de la solicitud finalizado."
-
+        
         st.session_state.global_summary_core_text = summary_core
         st.subheader("Resumen Generado")
         st.code(st.session_state.global_summary_core_text)
@@ -254,11 +250,6 @@ if st.session_state.global_summary_core_text:
                 final_summary_to_copy += f"\nEmail Cliente: {cliente_email}"
             if cliente_telefono:
                 final_summary_to_copy += f"\nTeléfono Cliente: {cliente_telefono}"
-
-            # Streamlit doesn't have a direct "copy to clipboard" function accessible
-            # from Python backend for security reasons.
-            # You typically rely on the user manually copying from a displayed text area,
-            # or use a community component. For this example, we'll display it
-            # in a text area the user can copy from.
+            
             st.code(final_summary_to_copy)
             st.success("✅ Resumen copiado (puedes copiar el texto de arriba manualmente).")
