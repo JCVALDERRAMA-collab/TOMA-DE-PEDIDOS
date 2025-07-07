@@ -264,5 +264,5 @@ if st.session_state.show_generated_summary:
 
     st.write("---")
     if st.button("Copiar Información"):
-        st_copy_to_clipboard(session_state.show_generated_summary)
+        st_copy_to_clipboard(session_state.global_summary_core_text)
         st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
