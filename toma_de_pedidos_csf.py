@@ -130,7 +130,7 @@ st.set_page_config(layout="centered", page_title="Generador de Pedidos")
 
 # --- Sección para el logo ---
 try:
-    st.image("LOGO 2.png", width=200) 
+    st.image("LOGO 2.png", width=200)
 except FileNotFoundError:
     st.warning("⚠️ No se encontró el logo. Asegúrate de que 'LOGO 2.png' esté en la misma carpeta o la ruta sea correcta.")
 
@@ -299,9 +299,12 @@ if not st.session_state.show_generated_summary:
                 st.session_state.show_generated_summary = True # Establece en True para mostrar el resumen
 
 # Muestra el resumen y el botón "Copiar Información" si show_generated_summary es True
-# Este bloque ahora está fuera del bloque 'if not st.session_state.show_generated_summary',
-# por lo que siempre se renderizará si show_generated_summary es True, independientemente de los clics del botón.
 if st.session_state.show_generated_summary:
     st.write("---")
-    st.subheader("Resumen Generado") 
+    st.subheader("Resumen Generado")
     st.code(st.session_state.global_summary_core_text)
+
+    # Add the "Copiar Información" button here
+    if st.button("Copiar Información", key='copy_summary_button'):
+        st_copy_to_clipboard(st.session_state.global_summary_core_text)
+        st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
