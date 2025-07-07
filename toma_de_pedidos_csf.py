@@ -7,7 +7,7 @@ from st_copy_to_clipboard import st_copy_to_clipboard
 
 # --- Configuration for the consecutive number ---
 CONSECUTIVE_FILE = 'ultimo_consecutivo.txt'
-INITIAL_CONSECUTIVE = 1000
+INITIAL_CONSECUTIVE = 00
 
 def get_next_consecutive():
     """Reads the last consecutive number from a file, increments it, and saves it back."""
@@ -95,7 +95,6 @@ if 'pedido_actual' not in st.session_state:
     st.session_state.pedido_actual = []
 if 'global_summary_core_text' not in st.session_state:
     st.session_state.global_summary_core_text = ""
-# Nueva variable para controlar si el resumen ya se ha generado y debe mostrarse
 if 'show_generated_summary' not in st.session_state:
     st.session_state.show_generated_summary = False
 
@@ -263,7 +262,8 @@ if st.session_state.show_generated_summary:
     st.subheader("Resumen Generado") 
     st.code(st.session_state.global_summary_core_text)
 
-    # The button to copy the information
+    # The button to copy the information now correctly references the summary text
     if st.button("Copiar Información", type="success", disabled=not st.session_state.global_summary_core_text):
+        # *** ESTA ES LA LÍNEA CLAVE QUE CAMBIAMOS ***
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
