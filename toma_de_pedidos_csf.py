@@ -305,6 +305,86 @@ def clear_all_products():
     st.success("✔️ ¡Pedido limpiado!")
     # No st.rerun() needed
 
+# --- Function to generate the summary text ---
+def generate_summary():
+    if not st.session_state.pedido_actual:
+        st.error("No hay productos en el pedido para generar el resumen.")
+        return ""
+
+    if st.session_state.current_consecutive_number is None:
+        st.session_state.current_consecutive_number = get_next_consecutive()
+
+    fecha_pedido = datetime.now().strftime("%d/%m/%Y")
+    hora_pedido = datetime.now().strftime("%H:%M:%S")
+
+    summary_text = f"**PEDIDO # {st.session_state.current_consecutive_number}**\n\n"
+    summary_text += f"**FECHA:** {fecha_pedido}\n"
+    summary_text += f"**HORA:** {hora_pedido}\n\n"
+    summary_text += f"**CLIENTE:** {st.session_state.cliente_input}\n"
+    summary_text += f"**NIT:** {st.session_state.nit_input}\n"
+    
+    if st.session_state.cliente_email_input:
+        summary_text += f"**EMAIL:** {st.session_state.cliente_email_input}\n"
+    if st.session_state.cliente_telefono_input:
+        summary_text += f"**TELÉFONO:** {st.session_state.cliente_telefono_input}\n"
+    
+    summary_text += "\n**DETALLE DEL PEDIDO:**\n"
+
+    for i, item in enumerate(st.session_state.pedido_actual):
+        if item["TIPO_PEDIDO"] == "Por Cajas/Bultos":
+            cajas_str = f"Cajas: {item['CANT_CAJAS']}" if item['CANT_CAJAS'] > 0 else ""
+            unidades_str = f"Unidades Adic.: {item['CANT_UNIDADES_IND']}" if item['CANT_UNIDADES_IND'] > 0 else ""
+            
+            if cajas_str and unidades_str:
+                quantity_detail = f"({cajas_str}, {unidades_str})"
+            elif cajas_str:
+                quantity_detail = f"({cajas_str})"
+            elif unidades_str:
+                quantity_detail = f"({unidades_str})"
+            else:
+                quantity_detail = "" # Should not happen if validation works
+            
+            summary_text += f"{i+1}. {item['DESCRIPCION']} {quantity_detail} - Total Unidades Calculadas: {item['TOTAL_UNIDADES_CALCULADAS']}\n"
+        
+        elif item["TIPO_PEDIDO"] == "Por Unidades/Packs":
+            cajas_unidades_str = f"Cajas de Uds/Packs: {item['CANT_CAJAS']}" if item['CANT_CAJAS'] > 0 else ""
+            unidades_ind_str = f"Unidades/Packs Ind.: {item['CANT_UNIDADES_IND']}" if item['CANT_UNIDADES_IND'] > 0 else ""
+
+            if cajas_unidades_str and unidades_ind_str:
+                quantity_detail = f"({cajas_unidades_str}, {unidades_ind_str})"
+            elif cajas_unidades_str:
+                quantity_detail = f"({cajas_unidades_str})"
+            elif unidades_ind_str:
+                quantity_detail = f"({unidades_ind_str})"
+            else:
+                quantity_detail = "" # Should not happen if validation works
+            
+            summary_text += f"{i+1}. {item['DESCRIPCION']} {quantity_detail} - Total Unidades Calculadas: {item['TOTAL_UNIDADES_CALCULADAS']}\n"
+            
+    summary_text += "\n--- FIN DEL PEDIDO ---\n"
+    return summary_text
+
+# --- Callback for 'Generar Resumen' button ---
+def finalize_order():
+    if not st.session_state.pedido_actual:
+        st.error("🚨 No puedes generar un resumen si el pedido está vacío. Por favor, añade productos.")
+        st.session_state.show_generated_summary = False
+        return
+
+    # Validate email and phone before generating summary
+    if st.session_state.cliente_email_input and not is_valid_email(st.session_state.cliente_email_input):
+        st.error("❌ Por favor, corrige el formato del email antes de generar el resumen.")
+        st.session_state.show_generated_summary = False
+        return
+    if st.session_state.cliente_telefono_input and not is_valid_phone(st.session_state.cliente_telefono_input):
+        st.error("❌ Por favor, corrige el formato del teléfono antes de generar el resumen.")
+        st.session_state.show_generated_summary = False
+        return
+
+    st.session_state.global_summary_core_text = generate_summary()
+    st.session_state.show_generated_summary = True
+    # Do not reset pedido_actual here, it should only be reset by 'Limpiar Pedido Completo'
+
 
 # --- Streamlit UI ---
 st.set_page_config(layout="centered", page_title="Generador de Pedidos Consumidor Final")
@@ -488,6 +568,30 @@ if cliente_telefono_input and not is_valid_phone(cliente_telefono_input):
     st.error("❌ Formato de teléfono inválido. Por favor, verifica (debe contener solo números, espacios, guiones o un '+' inicial).")
 else:
     st.session_state.cliente_telefono_input = cliente_telefono_input
+
+st.write("---")
+
+# --- Generate Summary Section ---
+if not st.session_state.show_generated_summary:
+    st.button(
+        "Generar Resumen del Pedido",
+        type="primary",
+        key='generate_summary_button',
+        on_click=finalize_order
+    )
+else:
+    st.subheader("Resumen del Pedido Generado")
+    st.markdown(st.session_state.global_summary_core_text)
+
+    # Copy to clipboard button
+    st_copy_to_clipboard(st.session_state.global_summary_core_text)
+
+    # Buttons to clear or go back
+    col1, col2 = st.columns(2)
+    with col1:
+        st.button("Volver y Añadir Más Productos", key='go_back_button', on_click=go_back_and_add_more)
+    with col2:
+        st.button("Limpiar Pedido Completo", key='clear_summary_button', type="secondary", on_click=clear_all_products)
         
 st.markdown("---")
 st.caption("Hecho por Cartera ATW Internacional.")
