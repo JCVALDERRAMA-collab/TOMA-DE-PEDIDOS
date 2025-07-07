@@ -5,12 +5,14 @@ import os
 import re
 from st_copy_to_clipboard import st_copy_to_clipboard
 
-# --- Configuration for the consecutive number ---
+# --- Configuración para el número consecutivo ---
+# Archivo donde se guarda el último número consecutivo
 CONSECUTIVE_FILE = 'ultimo_consecutivo.txt'
+# Número inicial para el consecutivo si el archivo no existe o está vacío
 INITIAL_CONSECUTIVE = 1000
 
 def get_next_consecutive():
-    """Reads the last consecutive number from a file, increments it, and saves it back."""
+    """Lee el último número consecutivo de un archivo, lo incrementa y lo guarda de nuevo."""
     current_consecutive = INITIAL_CONSECUTIVE
     if os.path.exists(CONSECUTIVE_FILE):
         try:
@@ -31,7 +33,7 @@ def get_next_consecutive():
     
     return next_consecutive
 
-# Initialize the file if it doesn't exist on first run
+# Inicializa el archivo si no existe en la primera ejecución
 if not os.path.exists(CONSECUTIVE_FILE):
     with open(CONSECUTIVE_FILE, 'w') as f:
         f.write(str(INITIAL_CONSECUTIVE))
@@ -90,35 +92,38 @@ productos_data = [
 df_productos = pd.DataFrame(productos_data)
 descripciones_productos = df_productos['DESCRIPCION'].tolist()
 
-# Use Streamlit's session state to store variables that need to persist across reruns
+# Usa el estado de sesión de Streamlit para almacenar variables que necesitan persistir entre re-ejecuciones
 if 'pedido_actual' not in st.session_state:
     st.session_state.pedido_actual = []
 if 'global_summary_core_text' not in st.session_state:
     st.session_state.global_summary_core_text = ""
 if 'show_generated_summary' not in st.session_state:
     st.session_state.show_generated_summary = False
-# Initialize these to maintain their state, even if they start empty
-if 'cliente_email_input' not in st.session_state: # Use unique keys for all inputs
+# Inicializa estas variables para mantener su estado, incluso si empiezan vacías
+if 'cliente_email_input' not in st.session_state: # Usa claves únicas para todas las entradas
     st.session_state.cliente_email_input = ''
-if 'cliente_telefono_input' not in st.session_state: # Use unique keys for all inputs
+if 'cliente_telefono_input' not in st.session_state: # Usa claves únicas para todas las entradas
     st.session_state.cliente_telefono_input = ''
+if 'last_email_input_value' not in st.session_state: # Para rastrear cambios en el email
+    st.session_state.last_email_input_value = ''
+if 'last_phone_input_value' not in st.session_state: # Para rastrear cambios en el teléfono
+    st.session_state.last_phone_input_value = ''
 
-
-# --- Validation functions for email and phone ---
+# --- Funciones de validación para email y teléfono ---
 def is_valid_email(email):
-    """Basic email validation."""
-    if not email: # Allow empty email
+    """Validación básica de email."""
+    if not email: # Permite email vacío
         return True
     return re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email)
 
 def is_valid_phone(phone):
-    """Basic phone validation (allows for optional leading + and spaces/hyphens)."""
-    if not phone: # Allow empty phone
+    """Validación básica de teléfono (permite + inicial opcional y espacios/guiones)."""
+    if not phone: # Permite teléfono vacío
         return True
-    # Ensures at least 7 digits, allows + at start, and spaces/hyphens in between
+    # Asegura al menos 7 dígitos, permite + al inicio, y espacios/guiones intermedios
     return re.match(r"^\+?[\d\s\-]{7,15}$", phone)
 
-# --- Streamlit UI ---
+# --- Interfaz de usuario de Streamlit ---
 st.set_page_config(layout="centered", page_title="Generador de Pedidos")
 
 # --- Sección para el logo ---
@@ -133,7 +138,7 @@ st.markdown("Completa los detalles para generar un resumen de tu solicitud.")
 st.write("---")
 
 st.subheader("Datos del Cliente")
-# Using unique keys for these inputs too
+# Usando claves únicas para estas entradas también
 nit = st.text_input("NIT:", value='222222222', disabled=True, key='nit_input')
 nombre_cliente = st.text_input("Cliente:", value='CONSUMIDOR FINAL', disabled=True, key='cliente_input')
 
@@ -145,7 +150,7 @@ selected_description = st.selectbox(
     'Selecciona un producto:',
     options=[""] + descripciones_productos,
     index=0,
-    key='product_select', # Unique key for selectbox
+    key='product_select', # Clave única para el selectbox
     help="Empieza a escribir o selecciona un producto de la lista."
 )
 
@@ -166,7 +171,7 @@ with col1:
         value=0,
         step=1,
         disabled=(producto_encontrado is None),
-        key='cantidad_cajas_input' # Unique key for number input
+        key='cantidad_cajas_input' # Clave única para la entrada numérica
     )
 
 with col2:
@@ -176,10 +181,10 @@ with col2:
         value=0,
         step=1,
         disabled=(producto_encontrado is None),
-        key='cantidad_unidades_input' # Unique key for number input
+        key='cantidad_unidades_input' # Clave única para la entrada numérica
     )
 
-# Use a unique key for this button
+# Usa una clave única para este botón
 if st.button('Añadir Producto al Pedido', type="primary", key='add_product_button', disabled=(producto_encontrado is None or (cantidad_cajas == 0 and cantidad_unidades == 0))):
     if not selected_description or (cantidad_cajas == 0 and cantidad_unidades == 0):
         st.error("❌ Error: Selecciona un producto e ingresa al menos una cantidad (caja o unidad).")
@@ -193,27 +198,27 @@ if st.button('Añadir Producto al Pedido', type="primary", key='add_product_butt
             "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
         })
         st.success(f"Producto '{selected_description}' añadido al pedido.")
-        # Reset the summary state when a new product is added
+        # Limpia el resumen y ocúltalo cuando se añade un nuevo producto
         st.session_state.global_summary_core_text = ""
-        st.session_state.show_generated_summary = False # Hide the summary
+        st.session_state.show_generated_summary = False # Oculta el resumen
         
-        # Reset product selection and quantities after adding for a cleaner UX
-        st.session_state['product_select'] = "" # Reset selectbox to default
-        st.session_state['cantidad_cajas_input'] = 0 # Reset quantity
-        st.session_state['cantidad_unidades_input'] = 0 # Reset quantity
-        st.rerun() # Forces a rerun to clear inputs and update button states
+        # También limpia la selección de producto y las cantidades después de añadir para una mejor UX
+        st.session_state['product_select'] = "" # Reinicia el selectbox
+        st.session_state['cantidad_cajas_input'] = 0 # Reinicia la cantidad
+        st.session_state['cantidad_unidades_input'] = 0 # Reinicia la cantidad
+        st.rerun() # Fuerza una re-ejecución para limpiar las entradas y actualizar el estado de los botones
 
 st.write("---")
 
 st.subheader("Productos en el Pedido")
 if st.session_state.pedido_actual:
-    # Option to clear all products
+    # Opción para limpiar todos los productos
     if st.button("Limpiar Pedido Completo", key='clear_all_products_button', type="secondary"):
         st.session_state.pedido_actual = []
         st.session_state.global_summary_core_text = ""
         st.session_state.show_generated_summary = False
         st.success("✔️ ¡Pedido limpiado!")
-        st.rerun() # Rerun to reflect changes immediately
+        st.rerun() # Fuerza una re-ejecución para reflejar los cambios inmediatamente
         
     for i, item in enumerate(st.session_state.pedido_actual):
         total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
@@ -225,31 +230,31 @@ st.write("---")
 
 st.subheader("Información de Contacto Adicional")
 
-# Get current values for comparison and use distinct keys for the text inputs
+# Obtiene los valores actuales para comparación y usa claves distintas para las entradas de texto
 cliente_email_input = st.text_input("Email Cliente:", value=st.session_state.cliente_email_input, placeholder='ejemplo@dominio.com', key='cliente_email_input')
 cliente_telefono_input = st.text_input("Teléfono Cliente:", value=st.session_state.cliente_telefono_input, placeholder='Ej: 3001234567', key='cliente_telefono_input')
 
-# Check if contact info has changed. If so, reset summary state
+# Verifica si la información de contacto ha cambiado. Si es así, reinicia el estado del resumen
 if (cliente_email_input != st.session_state.get('last_email_input_value', '')) or \
    (cliente_telefono_input != st.session_state.get('last_phone_input_value', '')):
     st.session_state.global_summary_core_text = ""
     st.session_state.show_generated_summary = False
-    # Update the "last value" in session state for comparison in next rerun
+    # Actualiza el "último valor" en el estado de sesión para comparación en la próxima re-ejecución
     st.session_state.last_email_input_value = cliente_email_input
     st.session_state.last_phone_input_value = cliente_telefono_input
 
 
 st.write("---")
 
-# Conditional display for 'Generar Resumen Final' button
-# This button should only appear if no summary is currently being shown
+# Visualización condicional para el botón 'Generar Resumen Final'
+# Este botón solo debe aparecer si no se está mostrando un resumen actualmente
 if not st.session_state.show_generated_summary:
     if st.button('Generar Resumen Final', type="secondary", key='generate_summary_button'):
         if not st.session_state.pedido_actual:
             st.warning("No hay productos en el pedido para generar un resumen.")
         else:
-            email_valid = is_valid_email(cliente_email_input) # Use the input variable
-            phone_valid = is_valid_phone(cliente_telefono_input) # Use the input variable
+            email_valid = is_valid_email(cliente_email_input) # Usa la variable de entrada
+            phone_valid = is_valid_phone(cliente_telefono_input) # Usa la variable de entrada
 
             if not email_valid:
                 st.error("❌ Error: Formato de email inválido. Por favor, corrígelo antes de generar el resumen.")
@@ -265,9 +270,9 @@ if not st.session_state.show_generated_summary:
                 summary_core += f"NIT: {nit}\n"
                 summary_core += f"Cliente: {nombre_cliente}\n"
                 
-                if cliente_email_input: # Use the input variable
+                if cliente_email_input: # Usa la variable de entrada
                     summary_core += f"Email Cliente: {cliente_email_input}\n"
-                if cliente_telefono_input: # Use the input variable
+                if cliente_telefono_input: # Usa la variable de entrada
                     summary_core += f"Teléfono Cliente: {cliente_telefono_input}\n"
 
                 summary_core += "\n--- Detalles de los Productos Pedidos ---\n"
@@ -286,19 +291,19 @@ if not st.session_state.show_generated_summary:
                 summary_core += "Resumen de la solicitud finalizado."
                 
                 st.session_state.global_summary_core_text = summary_core
-                st.session_state.show_generated_summary = True # Set to True to display summary
-                st.rerun() # Force a rerun to immediately hide this button and show the summary/copy button
+                st.session_state.show_generated_summary = True # Establece en True para mostrar el resumen
+                st.rerun() # Fuerza una re-ejecución para ocultar inmediatamente este botón y mostrar el resumen/botón de copiar
 
-# Display the summary and "Copiar Información" button if show_generated_summary is True
-# This block is now outside the 'if not st.session_state.show_generated_summary' block,
-# so it will always render if show_generated_summary is True, regardless of button clicks.
+# Muestra el resumen y el botón "Copiar Información" si show_generated_summary es True
+# Este bloque ahora está fuera del bloque 'if not st.session_state.show_generated_summary',
+# por lo que siempre se renderizará si show_generated_summary es True, independientemente de los clics del botón.
 if st.session_state.show_generated_summary:
     st.write("---")
     st.subheader("Resumen Generado") 
     st.code(st.session_state.global_summary_core_text)
 
-    # The button to copy the information (always visible when summary is displayed)
-    # Using a unique key for this button
+    # El botón para copiar la información (siempre visible cuando se muestra el resumen)
+    # Usando una clave única para este botón
     if st.button("Copiar Información", type="success", key='copy_info_button', disabled=not st.session_state.global_summary_core_text):
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
