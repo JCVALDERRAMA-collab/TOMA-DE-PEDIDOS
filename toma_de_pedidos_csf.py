@@ -286,19 +286,21 @@ if not st.session_state.show_generated_summary:
                 summary_core += "Resumen de la solicitud finalizado."
                 
                 st.session_state.global_summary_core_text = summary_core
-                st.session_state.show_generated_summary = True # Set to True to display summary
-                st.rerun() # Force a rerun to immediately hide this button and show the summary/copy button
+                st.session_state.show_generated_summary = True # Establece en True para mostrar el resumen
+                st.rerun() # Fuerza una re-ejecución para ocultar inmediatamente este botón y mostrar el resumen/botón de copiar
 
-# Display the summary and "Copiar Información" button if show_generated_summary is True
-# This block is now outside the 'if not st.session_state.show_generated_summary' block,
-# so it will always render if show_generated_summary is True, regardless of button clicks.
+# Muestra el resumen y el botón "Copiar Información" si show_generated_summary es True
+# Este bloque ahora está fuera del bloque 'if not st.session_state.show_generated_summary',
+# por lo que siempre se renderizará si show_generated_summary es True, independientemente de los clics del botón.
 if st.session_state.show_generated_summary:
     st.write("---")
     st.subheader("Resumen Generado") 
     st.code(st.session_state.global_summary_core_text)
 
-    # The button to copy the information (always visible when summary is displayed)
-    # Using a unique key for this button
+    # El botón para copiar la información (siempre visible cuando se muestra el resumen)
+    # Usando una clave única para este botón
     if st.button("Copiar Información", type="success", key='copy_info_button', disabled=not st.session_state.global_summary_core_text):
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
+
+
