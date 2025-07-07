@@ -224,27 +224,6 @@ if st.session_state.reset_inputs_flag:
     st.session_state.cantidad_unidades_input = 0
     st.session_state.reset_inputs_flag = False # Reset the flag immediately
 
-
-# --- Callback function for radio button to disable/enable quantities ---
-def on_product_type_change():
-    """Resets quantity inputs based on the selected product type."""
-    if st.session_state.product_type_selector_radio == "Por Cajas/Bultos":
-        st.session_state.selected_product_type = "cajas"
-        # When switching to cajas, clear units input for units list
-        st.session_state.cantidad_unidades_input = 0 
-        # Also clear the specific 'cantidad_cajas_input_unidades' if it was used last time
-        if 'cantidad_cajas_input_unidades' in st.session_state:
-            st.session_state.cantidad_cajas_input_unidades = 0
-    else: # "Por Unidades/Packs"
-        st.session_state.selected_product_type = "unidades"
-        # When switching to unidades, clear boxes input for cajas list
-        st.session_state.cantidad_cajas_input = 0
-        # Also clear the specific 'cantidad_unidades_input_cajas_extra' if it was used last time
-        if 'cantidad_unidades_input_cajas_extra' in st.session_state:
-            st.session_state.cantidad_unidades_input_cajas_extra = 0
-    st.session_state.global_summary_core_text = "" # Clear summary on type change
-    st.session_state.show_generated_summary = False
-
 # --- Validation functions for email and phone ---
 def is_valid_email(email):
     """Basic email validation."""
@@ -355,11 +334,14 @@ if not st.session_state.show_generated_summary:
         "Seleccionar tipo de producto:",
         options=["Por Cajas/Bultos", "Por Unidades/Packs"],
         index=0 if st.session_state.selected_product_type == "cajas" else 1,
-        key='product_type_selector_radio',
-        on_change=on_product_type_change # Add the callback here
+        key='product_type_selector_radio'
     )
 
-    # The on_change callback already updates st.session_state.selected_product_type
+    # Update session state based on radio button
+    if selected_product_type_ui == "Por Cajas/Bultos":
+        st.session_state.selected_product_type = "cajas"
+    else:
+        st.session_state.selected_product_type = "unidades"
     
     selected_description = ""
     producto_encontrado = None
@@ -395,7 +377,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_cajas_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None),
                 key='cantidad_cajas_input' # Reusing key, but it's fine since it's inside conditional block
             )
         with col2:
@@ -404,7 +386,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None),
                 key='cantidad_unidades_input_cajas_extra'
             )
 
@@ -437,7 +419,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_cajas_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None),
                 key='cantidad_cajas_input_unidades'
             )
         with col2:
@@ -446,7 +428,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None),
                 key='cantidad_unidades_input_unidades'
             )
 
