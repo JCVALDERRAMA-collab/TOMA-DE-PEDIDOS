@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import os
 import re
-from st_copy_to_clipboard import st_copy_to_clipboard # ¡Nuevo! Para copiar al portapapeles del navegador
+from st_copy_to_clipboard import st_copy_to_clipboard
 
 # --- Configuration for the consecutive number ---
 CONSECUTIVE_FILE = 'ultimo_consecutivo.txt'
@@ -114,9 +114,6 @@ def is_valid_phone(phone):
 st.set_page_config(layout="centered", page_title="Generador de Pedidos")
 
 # --- Sección para el logo ---
-# REEMPLAZA "LOGO 2.png" con el nombre de tu archivo de imagen
-# Asegúrate de que el archivo de imagen esté en la misma carpeta que tu script de Streamlit,
-# o especifica la ruta completa (ej: "imagenes/tu_logo.png")
 try:
     st.image("LOGO 2.png", width=200) 
 except FileNotFoundError:
@@ -128,7 +125,6 @@ st.markdown("Completa los detalles para generar un resumen de tu solicitud.")
 st.write("---")
 
 st.subheader("Datos del Cliente")
-# Streamlit input widgets
 nit = st.text_input("NIT:", value='222222222', disabled=True)
 nombre_cliente = st.text_input("Cliente:", value='CONSUMIDOR FINAL', disabled=True)
 
@@ -184,6 +180,8 @@ if st.button('Añadir Producto al Pedido', type="primary", disabled=(producto_en
             "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
         })
         st.success(f"Producto '{selected_description}' añadido al pedido.")
+        # Clear the summary when a new product is added, so "Generar Resumen Final" shows again
+        st.session_state.global_summary_core_text = ""
 
 
 st.write("---")
@@ -231,7 +229,6 @@ if not st.session_state.global_summary_core_text: # If summary not yet generated
                 summary_core += f"NIT: {nit}\n"
                 summary_core += f"Cliente: {nombre_cliente}\n"
                 
-                # Add contact info if provided and valid
                 if cliente_email:
                     summary_core += f"Email Cliente: {cliente_email}\n"
                 if cliente_telefono:
@@ -253,21 +250,21 @@ if not st.session_state.global_summary_core_text: # If summary not yet generated
                 summary_core += "Resumen de la solicitud finalizado."
                 
                 st.session_state.global_summary_core_text = summary_core
+                # Display the summary immediately after generation
                 st.subheader("Resumen Generado")
                 st.code(st.session_state.global_summary_core_text)
 
-# If summary is already generated, show "Copiar Información" button
+# If summary is already generated, show the summary and "Copiar Información" button
 if st.session_state.global_summary_core_text:
+    # Ensure the summary is only displayed once if it already exists
+    if not st.session_state.get('summary_displayed_once', False):
+        st.subheader("Resumen Generado")
+        st.code(st.session_state.global_summary_core_text)
+        st.session_state.summary_displayed_once = True # Mark as displayed
+
     st.write("---")
-    st.subheader("Resumen Generado") # Show the summary again if already generated
-    st.code(st.session_state.global_summary_core_text) # Display the summary
-
-    # Check if contact fields are valid (they are part of the summary now)
-    # The summary generation only proceeds if email/phone are valid,
-    # so we can assume they are valid here.
-    # We can also add a check to ensure there's a summary to copy.
-    campos_obligatorios_completos = bool(st.session_state.global_summary_core_text)
-
-    if st.button("Copiar Información", type="success", disabled=not campos_obligatorios_completos):
+    # The 'whatsapp_message_final' variable doesn't exist in your code,
+    # it should be st.session_state.global_summary_core_text
+    if st.button("Copiar Información", type="success", disabled=not st.session_state.global_summary_core_text):
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
