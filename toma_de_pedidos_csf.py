@@ -350,16 +350,24 @@ st.write("---")
 st.subheader("Selección de Productos")
 
 if not st.session_state.show_generated_summary:
-    # Use radio buttons to select which list to show
+  # Use radio buttons to select which list to show
     selected_product_type_ui = st.radio(
         "Seleccionar tipo de producto:",
         options=["Por Cajas/Bultos", "Por Unidades/Packs"],
         index=0 if st.session_state.selected_product_type == "cajas" else 1,
-        key='product_type_selector_radio',
-        on_change=on_product_type_change # Add the callback here
+        key='product_type_selector_radio'
     )
 
-    # The on_change callback already updates st.session_state.selected_product_type
+    # Update session state based on radio button
+    # This also triggers a rerun, which will then disable/enable fields
+    if selected_product_type_ui == "Por Cajas/Bultos":
+        st.session_state.selected_product_type = "cajas"
+        disable_cajas_qty = False
+        disable_unidades_qty = True
+    else:
+        st.session_state.selected_product_type = "unidades"
+        disable_cajas_qty = True
+        disable_unidades_qty = False
     
     selected_description = ""
     producto_encontrado = None
@@ -395,16 +403,16 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_cajas_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
-                key='cantidad_cajas_input' # Reusing key, but it's fine since it's inside conditional block
+                disabled=(producto_encontrado is None or disable_cajas_qty), # Conditional disable
+                key='cantidad_cajas_input'
             )
         with col2:
             cantidad_unidades_val = st.number_input(
-                "Cantidad de Unidades Individuales Adicionales :",
+                "Cantidad de Unidades Individuales Adicionales:",
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None or disable_unidades_qty), # Conditional disable
                 key='cantidad_unidades_input_cajas_extra'
             )
 
@@ -437,7 +445,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_cajas_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None or disable_cajas_qty), # Conditional disable
                 key='cantidad_cajas_input_unidades'
             )
         with col2:
@@ -446,7 +454,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
-                disabled=(producto_encontrado is None), # Only disable if no product is selected
+                disabled=(producto_encontrado is None or disable_unidades_qty), # Conditional disable
                 key='cantidad_unidades_input_unidades'
             )
 
