@@ -173,7 +173,7 @@ def clear_all_products():
 
 
 # --- Streamlit UI ---
-st.set_page_config(layout="centered", page_title="Generador de Pedidos")
+st.set_page_config(layout="centered", page_title="Generador de Pedidos Consumidor Final")
 
 # --- Sección para el logo ---
 try:
