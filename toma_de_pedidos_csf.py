@@ -92,17 +92,16 @@ df_productos = pd.DataFrame(productos_data)
 # Prepend an empty string to the product descriptions for the "empty" selectbox option
 all_product_options = [""] + df_productos['DESCRIPCION'].tolist()
 
-# Use Streamlit's session state to store variables that need to persist across reruns
+# --- Initialize session state ---
 if 'pedido_actual' not in st.session_state:
     st.session_state.pedido_actual = []
 if 'global_summary_core_text' not in st.session_state:
     st.session_state.global_summary_core_text = ""
 if 'show_generated_summary' not in st.session_state:
     st.session_state.show_generated_summary = False
-# Initialize these to maintain their state, even if they start empty
-if 'cliente_email_input' not in st.session_state: # Use unique keys for all inputs
+if 'cliente_email_input' not in st.session_state:
     st.session_state.cliente_email_input = ''
-if 'cliente_telefono_input' not in st.session_state: # Use unique keys for all inputs
+if 'cliente_telefono_input' not in st.session_state:
     st.session_state.cliente_telefono_input = ''
 if 'product_select_index' not in st.session_state:
     st.session_state.product_select_index = 0
@@ -111,8 +110,16 @@ if 'cantidad_cajas_input' not in st.session_state:
 if 'cantidad_unidades_input' not in st.session_state:
     st.session_state.cantidad_unidades_input = 0
 if 'current_consecutive_number' not in st.session_state:
-    # This will store the consecutive number for the current order being built/summarized
     st.session_state.current_consecutive_number = None 
+if 'reset_inputs_flag' not in st.session_state: # NEW FLAG
+    st.session_state.reset_inputs_flag = False
+
+# --- NEW: Check reset flag at the start of the script ---
+if st.session_state.reset_inputs_flag:
+    st.session_state.product_select_index = 0
+    st.session_state.cantidad_cajas_input = 0
+    st.session_state.cantidad_unidades_input = 0
+    st.session_state.reset_inputs_flag = False # Reset the flag immediately
 
 # --- Validation functions for email and phone ---
 def is_valid_email(email):
@@ -128,7 +135,7 @@ def is_valid_phone(phone):
     # Ensures at least 7 digits, allows + at start, and spaces/hyphens in between
     return re.match(r"^\+?[\d\s\-]{7,15}$", phone)
 
-# --- Callback function to handle adding product and resetting inputs ---
+# --- Callback function to handle adding product and setting reset flag ---
 def add_product_callback(producto_encontrado, selected_index, cantidad_cajas, cantidad_unidades):
     if not selected_index or (cantidad_cajas == 0 and cantidad_unidades == 0):
         st.error("❌ Error: Selecciona un producto e ingresa al menos una cantidad (caja o unidad).")
@@ -142,29 +149,27 @@ def add_product_callback(producto_encontrado, selected_index, cantidad_cajas, ca
             "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
         })
         st.success(f"Producto '{selected_index}' añadido al pedido.")
-        # Reset the summary state when a new product is added
         st.session_state.global_summary_core_text = ""
-        st.session_state.show_generated_summary = False # Hide the summary
-        
-        # Reset product selection and quantities in session state
-        st.session_state.product_select_index = 0 # Reset selectbox to default (empty string)
-        st.session_state.cantidad_cajas_input = 0 # Reset quantity
-        st.session_state.cantidad_unidades_input = 0 # Reset quantity
+        st.session_state.show_generated_summary = False
+        st.session_state.reset_inputs_flag = True # Set the flag here to trigger reset on next run
+        # No need for st.rerun() here, as setting the flag will cause it naturally
 
 # --- Callback function for 'Volver y Añadir Más Productos' button ---
 def go_back_and_add_more():
-    st.session_state.show_generated_summary = False # Hide the summary
-    st.session_state.global_summary_core_text = "" # Clear previous summary text
-    # Do NOT reset current_consecutive_number or pedido_actual, as we are adding to the same order
-    st.success("Volviendo para añadir más productos.")
+    st.session_state.show_generated_summary = False
+    st.session_state.global_summary_core_text = ""
+    st.session_state.reset_inputs_flag = True # Reset inputs when going back
+    # No st.rerun() needed
 
 # --- Callback function for 'Limpiar Pedido Completo' button ---
 def clear_all_products():
     st.session_state.pedido_actual = []
     st.session_state.global_summary_core_text = ""
     st.session_state.show_generated_summary = False
-    st.session_state.current_consecutive_number = None # Reset consecutive when order is cleared
+    st.session_state.current_consecutive_number = None
+    st.session_state.reset_inputs_flag = True # Reset inputs when clearing order
     st.success("✔️ ¡Pedido limpiado!")
+    # No st.rerun() needed
 
 
 # --- Streamlit UI ---
@@ -197,7 +202,10 @@ if not st.session_state.show_generated_summary:
         key='product_select_widget',
         help="Empieza a escribir o selecciona un producto de la lista."
     )
+    # The selectbox's value changes, so we need to update its index in state
+    # This line should remain as it updates the index based on user selection in the current run
     st.session_state.product_select_index = all_product_options.index(selected_index) if selected_index in all_product_options else 0
+
 
     producto_encontrado = None
     if selected_index and selected_index != "":
@@ -229,7 +237,6 @@ if not st.session_state.show_generated_summary:
             key='cantidad_unidades_input'
         )
 
-    # Use a callback for the "Añadir Producto al Pedido" button
     st.button(
         'Añadir Producto al Pedido',
         type="primary",
