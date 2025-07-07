@@ -138,4 +138,136 @@ st.subheader("Selección de Productos")
 
 selected_description = st.selectbox(
     'Selecciona un producto:',
-    options=["
+    options=[""] + descripciones_productos,
+    index=0,
+    help="Empieza a escribir o selecciona un producto de la lista."
+)
+
+producto_encontrado = None
+if selected_description and selected_description != "":
+    df_filtered = df_productos[df_productos['DESCRIPCION'] == selected_description]
+    if not df_filtered.empty:
+        producto_encontrado = df_filtered.iloc[0]
+    else:
+        st.error("Producto no válido o no encontrado. Por favor, selecciona de la lista.")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    cantidad_cajas = st.number_input(
+        "Cantidad de Cajas:",
+        min_value=0,
+        value=0,
+        step=1,
+        disabled=(producto_encontrado is None)
+    )
+
+with col2:
+    cantidad_unidades = st.number_input(
+        "Cantidad de Unidades Individuales:",
+        min_value=0,
+        value=0,
+        step=1,
+        disabled=(producto_encontrado is None)
+    )
+
+if st.button('Añadir Producto al Pedido', type="primary", disabled=(producto_encontrado is None or (cantidad_cajas == 0 and cantidad_unidades == 0))):
+    if not selected_description or (cantidad_cajas == 0 and cantidad_unidades == 0):
+        st.error("❌ Error: Selecciona un producto e ingresa al menos una cantidad (caja o unidad).")
+    else:
+        st.session_state.pedido_actual.append({
+            "COD_PRODUCTO": producto_encontrado['COD_PRODUCTO'],
+            "DESCRIPCION": selected_description,
+            "CANT_CAJAS": cantidad_cajas,
+            "CANT_UNIDADES_IND": cantidad_unidades,
+            "UNIDAD_X_CAJA": producto_encontrado['UNIDAD_X_CAJA'],
+            "UNIDAD_X_PAQUETE": producto_encontrado['UNIDAD_X_PAQUETE']
+        })
+        st.success(f"Producto '{selected_description}' añadido al pedido.")
+
+
+st.write("---")
+
+st.subheader("Productos en el Pedido")
+if st.session_state.pedido_actual:
+    for i, item in enumerate(st.session_state.pedido_actual):
+        total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
+        st.markdown(f"**{i+1}.** {item['DESCRIPCION']} - Cajas: {item['CANT_CAJAS']}, Unidades: {item['CANT_UNIDADES_IND']} (Total: {total_unidades_item} uds)")
+else:
+    st.info("No hay productos añadidos al pedido aún.")
+
+st.write("---")
+
+st.subheader("Información de Contacto Adicional")
+cliente_email = st.text_input("Email Cliente:", value=st.session_state.get('cliente_email', ''), placeholder='ejemplo@dominio.com', key='email_input')
+cliente_telefono = st.text_input("Teléfono Cliente:", value=st.session_state.get('cliente_telefono', ''), placeholder='Ej: +57 300 1234567', key='phone_input')
+
+# Store inputs in session state to persist them across reruns
+st.session_state.cliente_email = cliente_email
+st.session_state.cliente_telefono = cliente_telefono
+
+st.write("---")
+
+# Conditional button display: "Generar Resumen Final" or "Copiar Información"
+if not st.session_state.global_summary_core_text: # If summary not yet generated
+    if st.button('Generar Resumen Final', type="secondary"):
+        if not st.session_state.pedido_actual:
+            st.warning("No hay productos en el pedido para generar un resumen.")
+        else:
+            email_valid = is_valid_email(cliente_email)
+            phone_valid = is_valid_phone(cliente_telefono)
+
+            if not email_valid:
+                st.error("❌ Error: Formato de email inválido. Por favor, corrígelo antes de generar el resumen.")
+            elif not phone_valid:
+                st.error("❌ Error: Formato de teléfono inválido. Por favor, corrígelo antes de generar el resumen.")
+            else:
+                consecutivo = get_next_consecutive()
+                
+                summary_core = ""
+                summary_core += "--- Resumen General de la Solicitud ---\n"
+                summary_core += f"Número de Pedido: {consecutivo}\n"
+                summary_core += f"Fecha y Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                summary_core += f"NIT: {nit}\n"
+                summary_core += f"Cliente: {nombre_cliente}\n"
+                
+                # Add contact info if provided and valid
+                if cliente_email:
+                    summary_core += f"Email Cliente: {cliente_email}\n"
+                if cliente_telefono:
+                    summary_core += f"Teléfono Cliente: {cliente_telefono}\n"
+
+                summary_core += "\n--- Detalles de los Productos Pedidos ---\n"
+
+                for i, item in enumerate(st.session_state.pedido_actual):
+                    total_unidades_item = (item['CANT_CAJAS'] * item['UNIDAD_X_CAJA']) + item['CANT_UNIDADES_IND']
+                    summary_core += f"\nProducto {i+1}:\n"
+                    summary_core += f"  Código: {item['COD_PRODUCTO']}\n"
+                    summary_core += f"  Descripción: {item['DESCRIPCION']}\n"
+                    summary_core += f"  Cant. Cajas: {item['CANT_CAJAS']}\n"
+                    summary_core += f"  Cant. Unidades Individuales: {item['CANT_UNIDADES_IND']}\n"
+                    summary_core += f"  Unidades por Caja (del producto): {item['UNIDAD_X_CAJA']}\n"
+                    summary_core += f"  Total Unidades Calculadas: {total_unidades_item}\n"
+                
+                summary_core += "\n-------------------------------------\n"
+                summary_core += "Resumen de la solicitud finalizado."
+                
+                st.session_state.global_summary_core_text = summary_core
+                st.subheader("Resumen Generado")
+                st.code(st.session_state.global_summary_core_text)
+
+# If summary is already generated, show "Copiar Información" button
+if st.session_state.global_summary_core_text:
+    st.write("---")
+    st.subheader("Resumen Generado") # Show the summary again if already generated
+    st.code(st.session_state.global_summary_core_text) # Display the summary
+
+    # Check if contact fields are valid (they are part of the summary now)
+    # The summary generation only proceeds if email/phone are valid,
+    # so we can assume they are valid here.
+    # We can also add a check to ensure there's a summary to copy.
+    campos_obligatorios_completos = bool(st.session_state.global_summary_core_text)
+
+    if st.button("Copiar Información", type="success", disabled=not campos_obligatorios_completos):
+        st_copy_to_clipboard(st.session_state.global_summary_core_text)
+        st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
