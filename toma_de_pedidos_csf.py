@@ -262,8 +262,7 @@ if st.session_state.show_generated_summary:
     st.subheader("Resumen Generado") 
     st.code(st.session_state.global_summary_core_text)
 
-    # The button to copy the information now correctly references the summary text
-    if st.button("Copiar Información", type="success", disabled=not st.session_state.global_summary_core_text):
-        # *** ESTA ES LA LÍNEA CLAVE QUE CAMBIAMOS ***
-        st_copy_to_clipboard(st.session_state.global_summary_core_text)
-        st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
+    st.write("---")
+    if st.button("Copiar Información"):
+    st_copy_to_clipboard(session_state.show_generated_summary)
+    st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
