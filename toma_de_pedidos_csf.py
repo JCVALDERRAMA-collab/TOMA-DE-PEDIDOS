@@ -116,7 +116,7 @@ st.set_page_config(layout="centered", page_title="Generador de Pedidos")
 # Asegúrate de que el archivo de imagen esté en la misma carpeta que tu script de Streamlit,
 # o especifica la ruta completa (ej: "imagenes/tu_logo.png")
 try:
-    st.image("LOGO 2.png", width=200, caption="Logo de tu Empresa")
+    st.image("LOGO 2.png", width=200)
 except FileNotFoundError:
     st.warning("⚠️ No se encontró el logo. Asegúrate de que 'tu_logo.png' esté en la misma carpeta o la ruta sea correcta.")
     # Puedes usar un placeholder si no encuentras el logo para evitar errores
