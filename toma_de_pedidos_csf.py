@@ -338,10 +338,15 @@ if not st.session_state.show_generated_summary:
     )
 
     # Update session state based on radio button
+    # This also triggers a rerun, which will then disable/enable fields
     if selected_product_type_ui == "Por Cajas/Bultos":
         st.session_state.selected_product_type = "cajas"
+        disable_cajas_qty = False
+        disable_unidades_qty = True
     else:
         st.session_state.selected_product_type = "unidades"
+        disable_cajas_qty = True
+        disable_unidades_qty = False
     
     selected_description = ""
     producto_encontrado = None
@@ -377,8 +382,8 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_cajas_input,
                 step=1,
-                disabled=(producto_encontrado is None),
-                key='cantidad_cajas_input' # Reusing key, but it's fine since it's inside conditional block
+                disabled=(producto_encontrado is None or disable_cajas_qty), # Conditional disable
+                key='cantidad_cajas_input'
             )
         with col2:
             cantidad_unidades_val = st.number_input(
@@ -386,7 +391,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
-                disabled=(producto_encontrado is None),
+                disabled=(producto_encontrado is None or disable_unidades_qty), # Conditional disable
                 key='cantidad_unidades_input_cajas_extra'
             )
 
@@ -419,7 +424,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_cajas_input,
                 step=1,
-                disabled=(producto_encontrado is None),
+                disabled=(producto_encontrado is None or disable_cajas_qty), # Conditional disable
                 key='cantidad_cajas_input_unidades'
             )
         with col2:
@@ -428,7 +433,7 @@ if not st.session_state.show_generated_summary:
                 min_value=0,
                 value=st.session_state.cantidad_unidades_input,
                 step=1,
-                disabled=(producto_encontrado is None),
+                disabled=(producto_encontrado is None or disable_unidades_qty), # Conditional disable
                 key='cantidad_unidades_input_unidades'
             )
 
@@ -460,91 +465,29 @@ st.write("---")
 
 st.subheader("Información de Contacto Adicional")
 
-cliente_email_input = st.text_input("Email Cliente:", value=st.session_state.cliente_email_input, placeholder='ejemplo@dominio.com', key='cliente_email_input')
-cliente_telefono_input = st.text_input("Teléfono Cliente:", value=st.session_state.cliente_telefono_input, placeholder='Ej: 3001234567', key='cliente_telefono_input')
+# Email input and validation
+cliente_email_input = st.text_input(
+    "Email Cliente:",
+    value=st.session_state.cliente_email_input,
+    placeholder='ejemplo@dominio.com',
+    key='cliente_email_input'
+)
+if cliente_email_input and not is_valid_email(cliente_email_input):
+    st.error("❌ Formato de email inválido. Por favor, verifica.")
+else:
+    st.session_state.cliente_email_input = cliente_email_input
 
-# Check if contact info has changed. If so, reset summary state
-if (cliente_email_input != st.session_state.get('last_email_input_value', '')) or \
-   (cliente_telefono_input != st.session_state.get('last_phone_input_value', '')):
-    st.session_state.global_summary_core_text = ""
-    st.session_state.show_generated_summary = False
-    st.session_state.last_email_input_value = cliente_email_input
-    st.session_state.last_phone_input_value = cliente_telefono_input
-
-
-st.write("---")
-
-if not st.session_state.show_generated_summary:
-    if st.button('Generar Resumen Final', type="secondary", key='generate_summary_button'):
-        if not st.session_state.pedido_actual:
-            st.warning("No hay productos en el pedido para generar un resumen.")
-        else:
-            email_valid = is_valid_email(cliente_email_input)
-            phone_valid = is_valid_phone(cliente_telefono_input)
-
-            if not email_valid:
-                st.error("❌ Error: Formato de email inválido. Por favor, corrígelo antes de generar el resumen.")
-            elif not phone_valid:
-                st.error("❌ Error: Formato de teléfono inválido. Por favor, corrígelo antes de generar el resumen.")
-            else:
-                if st.session_state.current_consecutive_number is None:
-                    st.session_state.current_consecutive_number = get_next_consecutive()
-                
-                summary_core = ""
-                summary_core += "--- Resumen General de la Solicitud ---\n"
-                summary_core += f"Número de Pedido: {st.session_state.current_consecutive_number}\n"
-                summary_core += f"Fecha y Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                summary_core += f"NIT: {nit}\n"
-                summary_core += f"Cliente: {nombre_cliente}\n"
-                
-                if cliente_email_input:
-                    summary_core += f"Email Cliente: {cliente_email_input}\n"
-                if cliente_telefono_input:
-                    summary_core += f"Teléfono Cliente: {cliente_telefono_input}\n"
-
-                summary_core += "\n--- Detalles de los Productos Pedidos ---\n"
-
-                for i, item in enumerate(st.session_state.pedido_actual):
-                    summary_core += f"\nProducto {i+1} ({item['TIPO_PEDIDO']}):\n"
-                    summary_core += f"  Código: {item['COD_PRODUCTO']}\n"
-                    summary_core += f"  Descripción: {item['DESCRIPCION']}\n"
-                    if item["TIPO_PEDIDO"] == "Por Cajas/Bultos":
-                        summary_core += f"  Cant. Cajas: {item['CANT_CAJAS']}\n"
-                        summary_core += f"  Cant. Unidades Individuales Adicionales: {item['CANT_UNIDADES_IND']}\n"
-                        summary_core += f"  Unidades por Paquete (del producto): {item['UNIDAD_X_PAQUETE_EN_CAJA']}\n"
-                        summary_core += f"  Paquetes por Caja (del producto): {item['PAQUETES_X_CAJA']}\n"
-                    elif item["TIPO_PEDIDO"] == "Por Unidades/Packs":
-                        summary_core += f"  Cant. Cajas (de estas unidades/packs): {item['CANT_CAJAS']}\n"
-                        summary_core += f"  Cant. Unidades Individuales/Packs: {item['CANT_UNIDADES_IND']}\n"
-                        summary_core += f"  Unidad Base del Producto: {item['UNIDAD_BASE_PRODUCTO']}\n"
-                        summary_core += f"  Unidades por Caja (de la unidad base): {item['UNIDADES_POR_CAJA_DE_UNIDAD']}\n"
-                    summary_core += f"  Total Unidades Calculadas: {item['TOTAL_UNIDADES_CALCULADAS']}\n"
-                
-                summary_core += "\n-------------------------------------\n"
-                summary_core += "Resumen de la solicitud finalizado."
-                
-                st.session_state.global_summary_core_text = summary_core
-                st.session_state.show_generated_summary = True
-                st.rerun()
-
-
-if st.session_state.show_generated_summary:
-    st.write("---")
-    st.subheader("Resumen Generado")
-    st.code(st.session_state.global_summary_core_text)
-
-    col_sum1, col_sum2 = st.columns(2)
-    with col_sum1:
-        if st.button("Copiar Información", key='copy_summary_button', type="primary"):
-            st_copy_to_clipboard(st.session_state.global_summary_core_text)
-            st.success("¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
-    with col_sum2:
-        st.button(
-            "Volver y Añadir Más Productos",
-            key='add_more_products_button',
-            type="secondary",
-            on_click=go_back_and_add_more
-        )
+# Phone input and validation
+cliente_telefono_input = st.text_input(
+    "Teléfono Cliente:",
+    value=st.session_state.cliente_telefono_input,
+    placeholder='Ej: +57 300 123 4567 o 3001234567',
+    key='cliente_telefono_input'
+)
+if cliente_telefono_input and not is_valid_phone(cliente_telefono_input):
+    st.error("❌ Formato de teléfono inválido. Por favor, verifica (debe contener solo números, espacios, guiones o un '+' inicial).")
+else:
+    st.session_state.cliente_telefono_input = cliente_telefono_input
         
 st.markdown("---")
 st.caption("Hecho por Cartera ATW Internacional.")
