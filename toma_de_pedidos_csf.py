@@ -307,4 +307,3 @@ if st.session_state.show_generated_summary:
     if st.button("Copiar Información", type="success", key='copy_info_button', disabled=not st.session_state.global_summary_core_text):
         st_copy_to_clipboard(st.session_state.global_summary_core_text)
         st.success("✅ ¡Mensaje copiado al portapapeles! Ya puedes pegarlo donde necesites.")
-        st.button("Algún otro botón", key='otro_boton_diferente') # Unique key
