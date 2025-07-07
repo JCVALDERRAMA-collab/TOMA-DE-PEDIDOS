@@ -202,7 +202,7 @@ st.write("---")
 
 st.subheader("Información de Contacto Adicional")
 cliente_email = st.text_input("Email Cliente:", value=st.session_state.get('cliente_email', ''), placeholder='ejemplo@dominio.com', key='email_input')
-cliente_telefono = st.text_input("Teléfono Cliente:", value=st.session_state.get('cliente_telefono', ''), placeholder='Ej: +57 300 1234567', key='phone_input')
+cliente_telefono = st.text_input("Teléfono Cliente:", value=st.session_state.get('cliente_telefono', ''), placeholder='Ej: 3001234567', key='phone_input')
 
 # Store inputs in session state to persist them across reruns
 st.session_state.cliente_email = cliente_email
